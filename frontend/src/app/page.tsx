@@ -21,15 +21,13 @@ export default function Home() {
     setDispatchStatus(null);
     setCombinedData(null);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      
       const [pulseRes, explainerRes] = await Promise.all([
-        fetch(`${baseUrl}/api/pulse`, {
+        fetch(`/api/pulse`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ weeks, max_reviews: maxReviews, star_range_min: starMin, star_range_max: starMax })
         }),
-        fetch(`${baseUrl}/api/explainer`, {
+        fetch(`/api/explainer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ asset_class: assetClass })

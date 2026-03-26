@@ -19,8 +19,7 @@ export default function PartCGates({ activeContent, contentType, setIsLoading, i
     setDispatchStatus(null);
     try {
       const recips = recipients.split("\n").filter(e => e.trim());
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      const res = await fetch(`${baseUrl}/api/dispatch`, {
+      const res = await fetch(`/api/dispatch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
