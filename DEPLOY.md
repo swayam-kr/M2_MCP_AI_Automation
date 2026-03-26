@@ -29,16 +29,20 @@ git push -u origin main
 
 ---
 
-## Step 2: Deploy Frontend to Vercel
+## Step 2: Deploy Frontend to Vercel (Fresh Start)
 
-1. Go to [vercel.com/new](https://vercel.com/new) and import your GitHub repo.
-2. Set **Root Directory** to `frontend/`.
-3. Set **Framework Preset** to `Next.js`.
-4. Add environment variable:
-   ```
-   NEXT_PUBLIC_BACKEND_URL = https://YOUR-BACKEND-APP.streamlit.app
-   ```
-5. Click **Deploy**. Vercel auto-detects Next.js and builds.
+1.  **Delete Existing Project**: Go to **Settings > General** and scroll to the bottom to delete the old project (this clears all "ghost" settings).
+2.  **New Project**: Go to [vercel.com/new](https://vercel.com/new) and import the repository.
+3.  **Project Name**: `groww-weekly-digest`.
+4.  **Root Directory**: Leave this as the **default** (this should be the main repo folder, **NOT** the `frontend` folder).
+5.  **Build & Output Settings**: (Toggle all 3 to **ON** and paste these commands):
+    - **Install Command**: `cd frontend && npm install`
+    - **Build Command**: `cd frontend && npm install && npm run build`
+    - **Output Directory**: `frontend/.next`
+6.  **Environment Variables**:
+    - **Key**: `NEXT_PUBLIC_BACKEND_URL`
+    - **Value**: `https://m2-groww-weekly-digest.streamlit.app`
+7.  Click **"Deploy"**.
 
 **After deploy:** Note down your Vercel URL (e.g., `https://groww-digest.vercel.app`).
 
