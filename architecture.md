@@ -251,6 +251,11 @@ M2_MCP_AI_Automation/
 3. Merges environment variable overrides (`.env` takes priority over YAML)
 4. Exposes a `get_setting("dot.path")` function used by every other module
 
+### Real-Life Use Case: The "Agile Dev" Problem
+**Problem:** In a fast-moving project, you constantly change LLM models or API keys. Hardcoding these means every change requires a code deployment.
+**Solution:** Phase 0 allows an Ops person to swap a Groq key or change the review date window in `config.yaml`/`.env` without touching a single line of logic. Most settings can even be updated live in Vercel's UI.
+
+
 **`utils.py`** provides shared utilities used across all phases:
 
 | Function | What It Does | Used By |
@@ -302,6 +307,11 @@ graph TD
 | 4 | Emoji Limit | `count_emojis() <= 3` | Excessive emojis corrupt LLM analysis |
 | 5 | Word Count | `len(text.split()) >= 10` | "Good app" has zero analytical value |
 | 6 | Deduplication | Set-based content deduplication | Remove exact duplicates |
+
+### Real-Life Use Case: The "Noise" Problem
+**Problem:** A product manager spends 4 hours a week reading "Good app" or "Mera paisa wapas karo" (Hindi) or reviews filled with spam phone numbers. None of this is actionable.
+**Solution:** Phase 1 architecture ensures that 10,000 "raw" reviews are distilled into ~100 "high-signal" English reviews. It automates the "noise cancellation" that used to be a manual, soul-crushing 4-hour task.
+
 
 **Caching:** Reviews are cached for 24 hours. Within TTL, the scraper returns cached data without re-fetching. Configurable via `scraping.cache.reviews_ttl_hours`.
 
@@ -357,9 +367,12 @@ When Key 1 hits a `429`, the router automatically rotates to Key 2. If Key 2 als
 ### Parallel Batching
 
 `classify_batch()` distributes review chunks across keys using `ThreadPoolExecutor`:
-- Each chunk is assigned to a different Groq key
-- Up to 4 chunks are processed concurrently
 - Failed chunks are logged but don't block other chunks
+
+### Real-Life Use Case: The "Free Tier" Problem
+**Problem:** You want to build a production-grade AI tool but have a $0 budget. Free LLM tiers like Groq have tiny rate limits that crash typical apps after 2-3 requests.
+**Solution:** Phase 2's **Multi-Key Rotation** mimics a "Paid Tier" by spreading load across 3 free accounts. If one account is throttled, the architecture automatically "flips the switch" to the next key. It makes the system robust for zero cost.
+
 
 ### `LLMResponse` Dataclass
 
@@ -415,6 +428,11 @@ graph TD
 | 5 | No PII in output | Regex scrub emails and phones from all text |
 | 6 | Theme metrics | Calculate percentage and average rating per theme |
 
+### Real-Life Use Case: The "Data Blindness" Problem
+**Problem:** A CEO asks "What's the #1 reason people hate the new update?" and gets a 50-page PDF of raw reviews. They can't find the answer.
+**Solution:** Phase 3 turns that 50-page mess into a single JSON "Pulse card" showing "App Crashes: 26%". It provides instant, quantitative clarity from qualitative mess.
+
+
 ---
 
 ## 9. Phase 4: Fee Explainer (Part B)
@@ -441,6 +459,11 @@ graph TD
 ```
 
 **Critical Rule:** The `official_links` and `last_checked` fields come from `fee_kb.json` and `config.yaml`, **never** from the LLM. This eliminates hallucinated URLs entirely.
+
+### Real-Life Use Case: The "Hallucination" Problem
+**Problem:** An AI assistant tells a user "Groww charging ₹50 for stocks" when the real price is ₹20. This leads to user anger and potential legal trouble.
+**Solution:** Phase 4 uses **KB-Grounded Prompting**. The AI isn't allowed to "remember" prices; it's forced to "read" the provided price list. The architecture treats the AI like a translator, not a memory bank.
+
 
 ---
 
@@ -488,6 +511,11 @@ sequenceDiagram
 | `POST /api/explainer` | Generate Fee Explainer | Scrape fees → KB-grounded LLM generation → anti-hallucination validation |
 | `POST /api/dispatch` | Send to Google Docs/Gmail | Format content → check gate approvals → launch MCP subprocess |
 
+### Real-Life Use Case: The "Silo" Problem
+**Problem:** All the AI analysis lives inside a developer's terminal or a private database. The Operations team can't see it or use it.
+**Solution:** Phase 5 exposes these pipelines via a standard web API. Any frontend (Web, Mobile, Slack Bot) can now "talk" to the intelligence engine and get structured answers.
+
+
 ---
 
 ## 11. Phase 6: Next.js Frontend
@@ -511,16 +539,15 @@ graph LR
     SIDEBAR --> MAIN
 ```
 
-### API Proxy Pattern
+**Why proxy instead of direct calls?**
+1. **Security:** `BACKEND_API_KEY` stays on the server — never exposed to the browser
+2. **CORS:** Browser-to-backend cross-origin issues are eliminated entirely
+3. **Flexibility:** Backend URL can change without any frontend code changes
 
-The frontend **never** directly calls the FastAPI backend. Instead, each Next.js API route (`app/api/pulse/route.ts`) acts as a proxy:
+### Real-Life Use Case: The "Accessibility" Problem
+**Problem:** The backend is brilliant, but nobody knows how to use cURL or Postman.
+**Solution:** Phase 6 provides a premium, "one-click" interface. A business user can generate a complex AI report by just moving a slider. The architecture bridges the technical-business gap.
 
-1. Receives the request from the browser
-2. Reads `NEXT_PUBLIC_BACKEND_URL` and `BACKEND_API_KEY` from environment
-3. Forwards the request with the API key attached as `X-API-KEY` header
-4. Returns the backend response to the browser
-
-**Why?** This keeps `BACKEND_API_KEY` secret (it lives on the server, never exposed to the browser), and eliminates CORS issues entirely.
 
 ---
 
@@ -531,7 +558,45 @@ The frontend **never** directly calls the FastAPI backend. Instead, each Next.js
 
 ### What is MCP (Model Context Protocol)?
 
-MCP is a standardized protocol for AI systems to interact with external tools. In this project, it's implemented as a **JSON-RPC server over stdio** (standard input/output pipes).
+MCP is a standardized protocol for AI systems to interact with external tools. Think of it as **"USB for AI"**. Just as a USB mouse works on any computer because both follow the USB protocol, an AI tool (MCP Server) can work with any AI Assistant (MCP Client) because they both speak the MCP protocol.
+
+### 12.1 The Client-Server Model
+
+In a standard MCP setup:
+- **The Client (LLM side):** The entity that asks for a tool to be run (e.g., Claude, Gemini, or in our case, the `MCPDispatcher`).
+- **The Server (Tool side):** The entity that actually executes the code (e.g., our `google_mcp_server.py`).
+
+**How it works in this project:**
+1. **FastAPI (The Orchestrator)** decides it needs to write to Google Docs.
+2. It calls **MCPDispatcher (The Client Proxy)**.
+3. The Client Proxy spawns **google_mcp_server.py (The MCP Server)** as a separate process.
+4. They talk via **JSON-RPC over Pipes (stdio)**.
+
+### 12.2 Intricate Details of the Dispatch Flow
+
+When you click "Append to Google Doc":
+1. **The Request:** FastAPI sends the report text to `mcp_dispatcher.py`.
+2. **The Handshake:** The Dispatcher starts the server and sends an `initialize` request. The Server responds with its name, version, and capabilities (e.g., "I can write to Docs and Gmail").
+3. **The Call:** The Dispatcher sends a `tools/call` message. It doesn't just say "run Python code"; it says **"Execute the tool named 'documents.appendText' with these specific arguments"**.
+4. **The Execution:** The Server receives the message, looks up its internal function for `documents.appendText`, handles OAuth2 auth, and hits the Google API.
+5. **The Reply:** The Server sends a JSON-RPC response back: `{"result": {"content": [{"type": "text", "text": "success"}]}}`.
+6. **The Termination:** The process closes. This is a "Stateless MCP" pattern.
+
+### 12.3 Setup on Different Interfaces
+
+| Interface | Setup Method | Problem Solved |
+|-----------|--------------|----------------|
+| **Local (macOS)** | Reads `token.json` from the filesystem. | Ease of development. You run `auth.py` once, and your local machine is authenticated forever. |
+| **Cloud (Vercel)** | Reads `GOOGLE_TOKEN_JSON` from Environment Variables. | **The "Read-Only Cloud" Problem.** Cloud servers (Vercel) don't allow permanent file storage. By putting the token in an Env Var, the MCP Server can "re-create" the token in memory every time it runs. |
+| **Internal (Subprocess)** | Uses `sys.executable` for venv inheritance. | **The "Dependency" Problem.** If the Server ran with system Python, it wouldn't find the Google API libraries. By forcing it to use the same Python as the parent, we ensure it has the right "brain." |
+
+### 12.4 Why MCP is useful here?
+
+Instead of writing custom code to talk to Google Docs, we built an **MCP Server**. This is future-proof:
+1. **Portability:** If you wanted to move this to a different AI framework tomorrow, you don't rewrite the Google Docs code. You just connect the new framework to this MCP server.
+2. **Security:** The logic for "how to write to a doc" is isolated in a separate, small process. The main API doesn't need to know Google API internals.
+3. **Standardization:** It follows the community standard (Model Context Protocol), making it easier for other developers to understand and maintain.
+
 
 ### How the Subprocess Communication Works
 
