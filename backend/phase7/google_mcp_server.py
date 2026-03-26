@@ -16,20 +16,19 @@ def get_credentials():
         # 1. Stateless Serverless Fast-Path (Vercel)
         token_env = os.environ.get("GOOGLE_TOKEN_JSON")
         if token_env:
-            logging.error("Found GOOGLE_TOKEN_JSON in environment. Loading stateless credentials...")
-            token_dict = json.loads(token_env)
-            return Credentials.from_authorized_user_info(token_dict)
+            try:
+                token_dict = json.loads(token_env)
+                return Credentials.from_authorized_user_info(token_dict), "success"
+            except Exception as e:
+                return None, f"JSON Parse Error on GOOGLE_TOKEN_JSON: {e}"
             
         # 2. Stateful Local Fallback
         if not os.path.exists("token.json"):
-            logging.error("token.json not found and GOOGLE_TOKEN_JSON env var missing.")
-            return None
+            return None, "token.json not found and GOOGLE_TOKEN_JSON env var missing."
             
-        logging.error("Loading credentials from local token.json file...")
-        return Credentials.from_authorized_user_file("token.json")
+        return Credentials.from_authorized_user_file("token.json"), "success"
     except Exception as e:
-        logging.error(f"Error loading credentials: {e}")
-        return None
+        return None, f"Fatal Error loading credentials: {e}"
 
 def handle_append_text(creds, params):
     doc_id = params.get("document_id")
@@ -107,7 +106,7 @@ def handle_send_draft(creds, params):
         return f"Error: {e}"
 
 def main():
-    creds = get_credentials()
+    creds, auth_err = get_credentials()
     
     for line in sys.stdin:
         line = line.strip()
@@ -140,7 +139,7 @@ def main():
             
             res_text = "unsupported_tool"
             if not creds:
-                res_text = "Error: Unauthenticated. Please run auth.py to generate token.json."
+                res_text = f"Error: Unauthenticated. Reason: {auth_err}"
             elif tool_name == "documents.appendText":
                 res_text = handle_append_text(creds, params)
             elif tool_name == "gmail.createDraft":
