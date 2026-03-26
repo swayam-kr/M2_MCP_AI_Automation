@@ -37,12 +37,12 @@ git push -u origin main
 4.  **Root Directory**: Leave this as the **default** (this should be the main repo folder, **NOT** the `frontend` folder).
 5.  **Build & Output Settings**: (Toggle all 3 to **ON** and paste these commands):
     - **Install Command**: `cd frontend && npm install`
-    - **Build Command**: `cd frontend && npm install && npm run build`
-    - **Output Directory**: `frontend/.next`
-6.  **Environment Variables**:
-    - **Key**: `NEXT_PUBLIC_BACKEND_URL`
-    - **Value**: `https://m2-groww-weekly-digest.streamlit.app`
-7.  Click **"Deploy"**.
+    - **Build Command**: Leave empty
+    - **Output Directory**: Leave empty
+6. Add **Environment Variables**:
+   - `NEXT_PUBLIC_BACKEND_URL`: `https://your-streamlit-app-url.streamlit.app`
+   - `BACKEND_API_KEY`: `my-secret-password-123` *(Must exactly match the key you put in Streamlit!)*
+7. Click **Deploy**.
 
 **After deploy:** Note down your Vercel URL (e.g., `https://groww-digest.vercel.app`).
 
@@ -54,13 +54,14 @@ git push -u origin main
 2. Set **Main file** to `streamlit_app.py`.
 3. Add **Secrets** (equivalent of `.env`):
    ```toml
-   GROQ_API_KEY_1 = "your-key-1"
-   GROQ_API_KEY_2 = "your-key-2"
-   GROQ_API_KEY_3 = "your-key-3"
-   GEMINI_API_KEY = "your-gemini-key"
-   GOOGLE_OAUTH_CLIENT_ID = "your-client-id"
-   GOOGLE_OAUTH_CLIENT_SECRET = "your-client-secret"
-   GOOGLE_DOCS_DOC_ID = "your-doc-id"
+   GROQ_API_KEY_1="gsk_..."
+   GROQ_API_KEY_2="gsk_..."
+   GROQ_API_KEY_3="gsk_..."
+   GEMINI_API_KEY="AIza..."
+   GOOGLE_OAUTH_CLIENT_ID="...apps.googleusercontent.com"
+   GOOGLE_OAUTH_CLIENT_SECRET="..."
+   GOOGLE_DOCS_DOC_ID="...your_doc_id..."
+   BACKEND_API_KEY="my-secret-password-123" # Any random string you choose!
    ```
 4. Click **Deploy**.
 

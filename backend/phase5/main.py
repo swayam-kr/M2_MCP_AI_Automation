@@ -55,6 +55,22 @@ async def log_requests(request: Request, call_next):
     logger.info(f"{request.method} {request.url.path} → {response.status_code} ({duration_ms}ms)")
     return response
 
+@app.middleware("http")
+async def api_key_validation(request: Request, call_next):
+    if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"] or request.method == "OPTIONS":
+        return await call_next(request)
+        
+    expected_key = os.getenv("BACKEND_API_KEY")
+    if expected_key:
+        provided_key = request.headers.get("X-API-KEY")
+        if not provided_key or provided_key != expected_key:
+            return JSONResponse(
+                status_code=401, 
+                content={"status": "error", "error": "Unauthorized: Invalid or missing X-API-KEY"}
+            )
+            
+    return await call_next(request)
+
 # ── Startup Events ───────────────────────────────────────────
 
 @app.on_event("startup")

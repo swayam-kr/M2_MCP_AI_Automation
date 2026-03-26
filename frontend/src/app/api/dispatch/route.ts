@@ -5,9 +5,13 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:800
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const apiKey = process.env.BACKEND_API_KEY || '';
     const response = await fetch(`${BACKEND_URL}/api/dispatch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey
+      },
       body: JSON.stringify(body),
     });
     
