@@ -5,6 +5,7 @@ Handles gated dispatch of generated content to designated MCP servers.
 Communicates using MCP's JSON-RPC protocol over stdio.
 """
 
+import sys
 import json
 import logging
 import subprocess
@@ -19,8 +20,15 @@ class MCPDispatcherError(Exception):
 
 class MCPDispatcher:
     def __init__(self):
-        self.doc_cmd = get_setting("mcp.google_docs.server_command", "npx @anthropic/google-docs-mcp").split()
-        self.gmail_cmd = get_setting("mcp.gmail.server_command", "npx @anthropic/gmail-mcp").split()
+        doc_cmd = get_setting("mcp.google_docs.server_command", "npx @anthropic/google-docs-mcp").split()
+        if doc_cmd[0] in ("python", "python3"):
+            doc_cmd[0] = sys.executable
+        self.doc_cmd = doc_cmd
+        
+        gmail_cmd = get_setting("mcp.gmail.server_command", "npx @anthropic/gmail-mcp").split()
+        if gmail_cmd[0] in ("python", "python3"):
+            gmail_cmd[0] = sys.executable
+        self.gmail_cmd = gmail_cmd
 
     def dispatch(self, content: Dict[str, Any], content_type: str, approvals: Dict[str, bool], recipients: List[str]) -> Dict[str, Any]:
         """
