@@ -16,6 +16,7 @@ from typing import Dict, Any, List
 
 from backend.phase2.llm_router import LLMRouter, LLMResponse
 from backend.config import get_setting
+from backend.utils import load_json, save_json
 
 logger = logging.getLogger("pipeline_fees")
 
@@ -58,11 +59,10 @@ class FeeExplainerPipeline:
         if asset_class not in self.valid_assets:
             raise ValueError(f"Unsupported asset class: {asset_class}. Must be one of {self.valid_assets}")
 
-        if not os.path.exists(input_file):
+        try:
+            kb = load_json(input_file)
+        except FileNotFoundError:
             raise FileNotFoundError(f"Missing input KB file: {input_file}")
-            
-        with open(input_file, 'r', encoding='utf-8') as f:
-            kb = json.load(f)
             
         # 2. Extract specific asset class data
         asset_data = kb.get("asset_classes", {}).get(asset_class)
@@ -100,9 +100,7 @@ class FeeExplainerPipeline:
         validated_data["provider_used"] = resp.provider
 
         # 6. Save
-        os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(validated_data, f, indent=2)
+        save_json(validated_data, output_file)
             
         logger.info(f"Fee Explainer saved to {output_file}")
         return validated_data

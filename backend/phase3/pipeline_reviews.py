@@ -13,6 +13,7 @@ from typing import List, Dict, Any
 
 from backend.phase2.llm_router import LLMRouter, LLMResponse
 from backend.config import get_setting
+from backend.utils import load_json, save_json
 
 logger = logging.getLogger("pipeline_reviews")
 
@@ -82,10 +83,10 @@ class ReviewPulsePipeline:
         if reviews_data is not None:
             reviews = reviews_data
         else:
-            if not os.path.exists(input_file):
+            try:
+                reviews = load_json(input_file)
+            except FileNotFoundError:
                 raise FileNotFoundError(f"Missing input file: {input_file}")
-            with open(input_file, 'r', encoding='utf-8') as f:
-                reviews = json.load(f)
                 
         if not reviews:
             raise ValueError("No reviews provided for processing.")
@@ -183,9 +184,7 @@ class ReviewPulsePipeline:
         }
         
         # 7. Save Output
-        os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(final_doc, f, indent=2)
+        save_json(final_doc, output_file)
             
         logger.info(f"Weekly Pulse successfully saved to {output_file}")
         return final_doc

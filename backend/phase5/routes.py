@@ -21,6 +21,7 @@ from backend.phase5.models import (
 from backend.phase3.pipeline_reviews import ReviewPulsePipeline
 from backend.phase4.pipeline_fees import FeeExplainerPipeline
 from backend.phase1.scraper_reviews import ReviewScraper
+from backend.phase1.scraper_fees import FeeScraper
 from backend.phase2.llm_router import LLMUnavailableError
 from backend.config import get_setting
 
@@ -72,6 +73,10 @@ async def generate_explainer(req: ExplainerRequest):
     """Generate Fee Explainer (Part B)."""
     start = time.time()
     try:
+        # Ensure fee knowledge base exists dynamically
+        scraper = FeeScraper()
+        await scraper.scrape()
+        
         pipeline = FeeExplainerPipeline()
         explainer_data = pipeline.run(req.asset_class)
 
