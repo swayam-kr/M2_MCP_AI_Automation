@@ -13,9 +13,19 @@ logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
 
 def get_credentials():
     try:
+        # 1. Stateless Serverless Fast-Path (Vercel)
+        token_env = os.environ.get("GOOGLE_TOKEN_JSON")
+        if token_env:
+            logging.error("Found GOOGLE_TOKEN_JSON in environment. Loading stateless credentials...")
+            token_dict = json.loads(token_env)
+            return Credentials.from_authorized_user_info(token_dict)
+            
+        # 2. Stateful Local Fallback
         if not os.path.exists("token.json"):
-            logging.error("token.json not found. Please run auth.py first.")
+            logging.error("token.json not found and GOOGLE_TOKEN_JSON env var missing.")
             return None
+            
+        logging.error("Loading credentials from local token.json file...")
         return Credentials.from_authorized_user_file("token.json")
     except Exception as e:
         logging.error(f"Error loading credentials: {e}")
