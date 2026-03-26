@@ -1,100 +1,67 @@
-# Deployment Guide — Groww Weekly Digest
+# 🚀 Vercel Production Deployment Guide
 
-## Prerequisites
-- GitHub account with repo access
-- Vercel account (free tier works)
-- Streamlit Cloud account (free tier works)
-- Google Cloud OAuth credentials (already set up if `token.json` exists)
+We have migrated the entire application (Frontend + Backend) to **Vercel**. Streamlit Cloud is no longer used, as its network architecture physically blocks REST API endpoints. By hosting both on Vercel, everything is 100% free, fast, and seamlessly unified!
+
+Because we have a Node.js frontend and a Python backend in the same repository, we will create **two separate Vercel projects** connected to the same GitHub repository.
 
 ---
 
-## Step 1: Push to GitHub
+## Part 1: Deploy the Python Backend API
 
-```bash
-cd /Users/kumarswayam/Desktop/M2_MCP_AI_Automation
-
-# Initialize (if not done)
-git init
-git remote add origin https://github.com/YOUR_USERNAME/M2_MCP_AI_Automation.git
-
-# Stage and commit
-git add -A
-git commit -m "Production release: Groww Weekly Digest v4.0"
-
-# Push
-git push -u origin main
-```
-
-> **Important:** Verify `.gitignore` excludes `token.json`, `.env`, `data/*.json`, `node_modules/`, and `venv/`.
-
----
-
-## Step 2: Deploy Frontend to Vercel (Fresh Start)
-
-1.  **Delete Existing Project**: Go to **Settings > General** and scroll to the bottom to delete the old project (this clears all "ghost" settings).
-2.  **New Project**: Go to [vercel.com/new](https://vercel.com/new) and import the repository.
-3.  **Project Name**: `groww-weekly-digest`.
-4.  **Root Directory**: Leave this as the **default** (this should be the main repo folder, **NOT** the `frontend` folder).
-5.  **Build & Output Settings**: (Toggle all 3 to **ON** and paste these commands):
-    - **Install Command**: `cd frontend && npm install`
-    - **Build Command**: Leave empty
-    - **Output Directory**: Leave empty
-6. Add **Environment Variables**:
-   - `NEXT_PUBLIC_BACKEND_URL`: `https://your-streamlit-app-url.streamlit.app`
-   - `BACKEND_API_KEY`: `my-secret-password-123` *(Must exactly match the key you put in Streamlit!)*
-7. Click **Deploy**.
-
-**After deploy:** Note down your Vercel URL (e.g., `https://groww-digest.vercel.app`).
-
----
-
-## Step 3: Deploy Backend to Streamlit Cloud
-
-1. Go to [share.streamlit.io](https://share.streamlit.io) and connect your GitHub repo.
-2. Set **Main file** to `streamlit_app.py`.
-3. Add **Secrets** (equivalent of `.env`):
-   ```toml
-   GROQ_API_KEY_1="gsk_..."
-   GROQ_API_KEY_2="gsk_..."
-   GROQ_API_KEY_3="gsk_..."
-   GEMINI_API_KEY="AIza..."
-   GOOGLE_OAUTH_CLIENT_ID="...apps.googleusercontent.com"
-   GOOGLE_OAUTH_CLIENT_SECRET="..."
-   GOOGLE_DOCS_DOC_ID="...your_doc_id..."
-   BACKEND_API_KEY="my-secret-password-123" # Any random string you choose!
+1. Go to your **Vercel Dashboard** and click **"Add New..." -> "Project"**.
+2. Import your GitHub repository: `swayam-kr/M2_MCP_AI_Automation`.
+3. In the Configuration screen:
+   - **Project Name**: `groww-weekly-api` (or similar)
+   - **Framework Preset**: select **Other**
+   - **Root Directory**: Leave it as the default `/` (Do NOT choose `frontend`).
+   - **Build Command**: Leave empty (Vercel automatically detects `api/index.py`).
+   - **Output Directory**: Leave empty
+4. Open the **Environment Variables** section and paste your secrets:
+   ```env
+   GROQ_API_KEY_1=gsk_...
+   GROQ_API_KEY_2=gsk_...
+   GROQ_API_KEY_3=gsk_...
+   GEMINI_API_KEY=AIza...
+   GOOGLE_OAUTH_CLIENT_ID=...
+   GOOGLE_OAUTH_CLIENT_SECRET=...
+   GOOGLE_DOCS_DOC_ID=...
+   BACKEND_API_KEY=my-secret-password-123
    ```
-4. Click **Deploy**.
-
-> **Note:** `token.json` must be generated locally first (via `python -m backend.phase7.auth`) and committed to a private repo branch or managed via secrets. Streamlit Cloud cannot run interactive OAuth flows.
-
----
-
-## Step 4: Connect Frontend ↔ Backend
-
-1. Update your Vercel env var `NEXT_PUBLIC_BACKEND_URL` with the Streamlit Cloud URL.
-2. Redeploy Vercel: `vercel --prod` or push a commit.
-3. Test the connection by generating a pulse from the Vercel-hosted frontend.
+5. Click **Deploy**.
+6. When finished, copy the new URL of your backend (e.g., `https://groww-weekly-api.vercel.app`).
 
 ---
 
-## Step 5: Verify Production
+## Part 2: Deploy the Next.js Frontend UI
 
-| Check | How |
-|-------|-----|
-| Backend health | Visit `https://YOUR-BACKEND.streamlit.app` — should show admin dashboard |
-| Frontend loads | Visit `https://YOUR-FRONTEND.vercel.app` — should show Groww Weekly Digest UI |
-| Pulse generation | Click "Generate Pulse" — should return analysis |
-| Doc append | Toggle "Append to Doc" and dispatch — check your Google Doc |
-| Email draft | Toggle "Create Draft" and dispatch — check Gmail Drafts folder |
+1. Go back to your **Vercel Dashboard** and click **"Add New..." -> "Project"**.
+2. Import the exact same GitHub repository again: `swayam-kr/M2_MCP_AI_Automation`.
+3. In the Configuration screen:
+   - **Project Name**: `groww-weekly-ui` (or similar)
+   - **Framework Preset**: select **Next.js**
+   - **Root Directory**: Click "Edit" and change it to `frontend`.
+4. Open the **Environment Variables** section and add:
+   - `NEXT_PUBLIC_BACKEND_URL`: Paste the URL you copied from Part 1 here (e.g., `https://groww-weekly-api.vercel.app`). *No slash at the end.*
+   - `BACKEND_API_KEY`: `my-secret-password-123` (Must match Part 1 exactly)
+5. Click **Deploy**.
 
 ---
 
-## Alternative: Deploy Backend on Render (if Streamlit Cloud has issues)
+## Part 3: Adding Google OAuth Token (for Dispatchers)
+Because Vercel is stateless, it needs the `token.json` to post to Google Docs/Gmail on your behalf without asking for a browser login every week.
 
-1. Create `Procfile`:
+1. On your local machine, ensure you have ran the scraper locally once so the `token.json` file is generated in the root folder.
+2. Open terminal and run:
+   ```bash
+   cat token.json
    ```
-   web: uvicorn backend.phase5.main:app --host 0.0.0.0 --port $PORT
-   ```
-2. Push to Render from GitHub.
-3. Set all env vars in the Render dashboard.
-4. Update Vercel `NEXT_PUBLIC_BACKEND_URL` to your Render URL.
+3. Copy the entire JSON printed.
+4. Go to **Vercel Dashboard** -> Your `groww-weekly-api` (Backend) Project -> **Settings** -> **Environment Variables**.
+5. Add a new variable:
+   - **Key**: `GOOGLE_TOKEN_JSON`
+   - **Value**: Paste the entire JSON you copied.
+6. Go to **Deployments** -> Click the `...` next to the latest -> **Redeploy**.
+
+> **Note:** Do NOT commit `token.json` to GitHub! Setting it as an environment variable keeps your Google Account 100% secure.
+
+🎉 **All done! Your full-stack AI platform is now live entirely on Vercel.**
