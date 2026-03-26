@@ -1,0 +1,81 @@
+# ──────────────────────────────────────────────
+# APPLICATION CONFIGURATION
+# All tunable parameters live here.
+# API keys are in .env (never in this file).
+# ──────────────────────────────────────────────
+
+app:
+  name: "AI Ops Automator"
+  version: "3.0"
+  log_level: "INFO"                     # DEBUG | INFO | WARNING | ERROR
+
+# ── Part A: Weekly Review Pulse ───────────────
+part_a:
+  app_id: "com.nextbillion.groww"       # Google Play Store app ID for Groww
+  play_store_url: "https://play.google.com/store/apps/details?id=com.nextbillion.groww&hl=en_IN"
+  max_weeks: 8                          # Hard cap for weeks slider in UI
+  default_weeks: 4                      # Default slider position
+  max_reviews: 200                      # Maximum reviews to send to LLM
+  default_max_reviews: 100              # Default input value
+  star_range_min: 1                     # Default minimum star filter
+  star_range_max: 5                     # Default maximum star filter
+  min_word_count: 10                    # Discard reviews with fewer words
+  language: "en"                        # Filter language
+  max_themes: 5                         # LLM groups into at most N themes
+  top_themes_count: 3                   # Pick top N for the pulse
+  quotes_count: 3                       # Exact number of verbatim quotes to extract
+  summary_max_words: 250                # Hard word limit on summary
+  action_ideas_count: 3                 # Number of action suggestions
+
+# ── Part B: Fee Explainer ─────────────────────
+part_b:
+  asset_classes:                        # Dropdown options in UI
+    - "Stocks"
+    - "F&O"
+    - "Mutual Funds"
+  max_bullets: 6                        # Max bullets in fee explanation
+  official_links_count: 2               # Official links to append
+  pricing_urls:                         # URLs to scrape for fee data
+    Stocks: "https://groww.in/pricing/stocks"
+    "F&O": "https://groww.in/pricing/futures-and-options"
+    "Mutual Funds": "https://groww.in/blog/mutual-fund-fees-and-charges"
+
+# ── Part C: MCP Dispatch ─────────────────────
+mcp:
+  google_docs:
+    server_command: "python3 backend/phase7/google_mcp_server.py"
+    document_id: ""                     # Override via .env GOOGLE_DOCS_DOC_ID
+  gmail:
+    server_command: "python3 backend/phase7/google_mcp_server.py"
+    default_recipients: []              # Pre-filled email IDs in UI
+    subject_prefix: "[AI Ops Automator]"
+
+# ── LLM Configuration ────────────────────────
+llm:
+  groq:
+    model: "llama-3.3-70b-versatile"
+    max_tokens: 2048
+    temperature: 0.3
+    timeout_seconds: 30                 # Per-request timeout
+    context_window: 8192                # Total context window in tokens
+  gemini:
+    model: "gemini-2.0-flash"
+    max_tokens: 2048
+    temperature: 0.3
+    timeout_seconds: 60
+    context_window: 32768
+  routing:
+    max_retries: 3                      # Total retries before LLMUnavailableError
+    backoff_base_seconds: 2             # Exponential: wait 2^attempt seconds
+    token_budget_ratio: 0.67            # Use 67% of context window for input
+
+# ── Scraping Configuration ───────────────────
+scraping:
+  playwright:
+    headless: true
+    timeout_ms: 30000                   # Page load timeout
+    viewport_width: 1280
+    viewport_height: 720
+  cache:
+    reviews_ttl_hours: 24               # Re-scrape if reviews file older than this
+    fee_kb_ttl_hours: 168               # Re-scrape fees every 7 days

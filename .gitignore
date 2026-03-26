@@ -1,0 +1,25 @@
+.env
+data/*.json
+!data/.gitkeep
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+.next/
+frontend/.env.local
+venv/
+
+# OAuth & Secrets
+token.json
+
+# IDE & OS
+.browsers/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Build artifacts
+frontend/.swc/
+frontend/tsconfig.tsbuildinfo
