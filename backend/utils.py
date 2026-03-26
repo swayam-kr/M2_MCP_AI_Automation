@@ -82,6 +82,15 @@ def fits_in_context(text: str, context_window: int, budget_ratio: float = 0.67) 
 
 # ── Cache TTL Check ───────────────────────────────────────
 
+import os
+
+def _resolve_path(file_path: str) -> Path:
+    """Remap paths to /tmp if running in Vercel Serverless read-only environment."""
+    path = Path(file_path)
+    if os.environ.get("VERCEL") == "1" and path.parts and path.parts[0] == "data":
+        return Path("/tmp") / path
+    return path
+
 def is_cache_valid(file_path: str, ttl_hours: int) -> bool:
     """
     Check if a cached JSON file is still within its TTL.
@@ -97,7 +106,7 @@ def is_cache_valid(file_path: str, ttl_hours: int) -> bool:
     Example:
         is_cache_valid("data/reviews_raw.json", 24)  -> True/False
     """
-    path = Path(file_path)
+    path = _resolve_path(file_path)
     if not path.exists():
         return False
 
@@ -120,11 +129,11 @@ def save_json(data: Union[Dict, List], file_path: str) -> None:
         data: Python dict or list to serialize
         file_path: Target file path (relative or absolute)
     """
-    path = Path(file_path)
+    path = _resolve_path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False, default=str)
-    logger.info(f"Saved JSON: {file_path}")
+    logger.info(f"Saved JSON: {path}")
 
 
 def load_json(file_path: str) -> Union[Dict, List]:
@@ -141,9 +150,9 @@ def load_json(file_path: str) -> Union[Dict, List]:
         FileNotFoundError: If file doesn't exist
         json.JSONDecodeError: If file isn't valid JSON
     """
-    path = Path(file_path)
+    path = _resolve_path(file_path)
     if not path.exists():
-        raise FileNotFoundError(f"JSON file not found: {file_path}")
+        raise FileNotFoundError(f"JSON file not found: {path}")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
